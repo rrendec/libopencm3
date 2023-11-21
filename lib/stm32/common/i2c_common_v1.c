@@ -525,8 +525,24 @@ void i2c_set_speed(uint32_t i2c, enum i2c_speeds speed, uint32_t clock_megahz)
 	switch(speed) {
 	case i2c_speed_fm_400k:
 		i2c_set_fast_mode(i2c);
+		/*
+		 * T_high = CCR * T_PCLK1
+		 * T_low = 2 * CCR * T_PCLK1
+		 * 1 / (T_high + T_low) = 400KHz
+		 * CCR = T_PCLK1 / (400 KHz * 3)
+		 *
+		 * FIXME: The equations above assume DUTY=0. For DUTY=1:
+		 *   T_high = 9 * CCR * T_PCLK1
+		 *   T_low = 16 * CCR * T_PCLK1
+		 *   We *must* take an extra parameter to the function to
+		 *   set the duty cycle and configure CCR consistently.
+		 */
 		i2c_set_ccr(i2c, clock_megahz * 5 / 6);
-		i2c_set_trise(i2c, clock_megahz + 1);
+		/*
+		 * Fm mode (400KHz) => rise_time(ns) = 300
+		 * trise = rise_time(ns) / T_PCLK1(ns) + 1
+		 */
+		i2c_set_trise(i2c, clock_megahz * 3 / 10 + 1);
 		break;
 	default:
 		/* fall back to standard mode */
