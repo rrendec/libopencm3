@@ -518,6 +518,10 @@ void i2c_transfer7(uint32_t i2c, uint8_t addr, const uint8_t *w, size_t wn, uint
 void i2c_set_speed(uint32_t i2c, enum i2c_speeds speed, uint32_t clock_megahz)
 {
 	i2c_set_clock_frequency(i2c, clock_megahz);
+	/*
+	 * For all equations below:
+	 * T_PCLK1(ns) = 1000 / clock_megahz
+	 */
 	switch(speed) {
 	case i2c_speed_fm_400k:
 		i2c_set_fast_mode(i2c);
@@ -528,9 +532,16 @@ void i2c_set_speed(uint32_t i2c, enum i2c_speeds speed, uint32_t clock_megahz)
 		/* fall back to standard mode */
 	case i2c_speed_sm_100k:
 		i2c_set_standard_mode(i2c);
-		/* x Mhz / (100kHz * 2) */
+		/*
+		 * T_high = T_low = CCR * T_PCLK1
+		 * 1 / (T_high + T_low) = 100KHz
+		 * CCR = T_PCLK1 / (100KHz * 2)
+		 */
 		i2c_set_ccr(i2c, clock_megahz * 5);
-		/* Sm mode, (100kHz) freqMhz + 1 */
+		/*
+		 * Sm mode (100KHz) => rise_time(ns) = 1000
+		 * trise = rise_time(ns) / T_PCLK1(ns) + 1
+		 */
 		i2c_set_trise(i2c, clock_megahz + 1);
 		break;
 	}
